@@ -101,7 +101,7 @@ class GetUrls(object):
     def parse_dict(self, data):
         if isinstance(data, dict):
             for key, val in data.items():
-                if val.startswith('http'):
+                if isinstance(val, str) and val.startswith('http'):
                     self.urls.append(val)
                 else:
                     self.parse_dict(val)
@@ -124,17 +124,17 @@ class GetUrls(object):
 @click.option('--verbose', '-v', default=False, count=True,
         help='v will check which links were redirected and vv will also print the links that are OK.')
 def cli(filename, parse, verbose):
+    """FILENAME is the file(s) which you want checked. It can be json or
+    any other text format, and alinkcheck should be able to find the links in it.
+    Then all the links will be checked and a report will be printed out to console."""
     verb_redir = verbose > 0
     verb_ok = verbose > 1
     for fname in filename:
         print('Parsing the file {}...'.format(fname))
         g = GetUrls(fname)
-        if parse:
+        if parse or not g.urls:
             print(g.urls)
             continue
         cl = CheckLinks(fname, g.urls, verb_redir, verb_ok)
         cl.run_check()
     click.secho('See you later.', fg='yellow')
-
-if __name__ == '__main__':
-    cli()
