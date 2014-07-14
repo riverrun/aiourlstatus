@@ -107,7 +107,7 @@ class GetUrls(object):
                     self.parse_dict(val)
         elif isinstance(data, list):
             for sub in data:
-                if sub.startswith('http'):
+                if isinstance(sub, str) and sub.startswith('http'):
                     self.urls.append(sub)
                 else:
                     self.parse_dict(sub)
