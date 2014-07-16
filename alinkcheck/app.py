@@ -22,42 +22,42 @@ import click
 import aiohttp
 
 class CheckLinks(object):
-    def __init__(self, fname, urls, verb_redir, verb_ok):
+    def __init__(self, fname, urls, verb_ok):
         self.oks = []
-        self.redirects = []
         self.probs = []
         self.errors = []
         self.fname = fname
         self.urls = urls
-        self.verb_redir = verb_redir
         self.verb_ok = verb_ok
 
     def run_check(self):
         print('Checking {} links...'.format(len(self.urls)))
         loop = asyncio.get_event_loop()
-        self.sem = asyncio.Semaphore(100)
-        #func = asyncio.wait([self.check_url(url) for url in self.urls])
+        self.sem = asyncio.Semaphore(20)
         func = self.wait_prog([self.check_url(url) for url in self.urls])
         loop.run_until_complete(func)
         self.report()
 
-    @asyncio.coroutine
     def wait_prog(self, coros):
         with click.progressbar(asyncio.as_completed(coros), length=len(coros)) as prog:
             for f in prog:
                 yield from f
 
-    @asyncio.coroutine
     def check_url(self, arg):
         try:
             with (yield from self.sem):
-                resp = yield from aiohttp.request('HEAD', arg, allow_redirects=not self.verb_redir)
-            if self.verb_redir and resp.status in (301, 302):
-                resp = yield from aiohttp.request('HEAD', arg, max_redirects=5)
-                if resp.status == 200:
-                    scheme = arg.split(':', 1)[0] + '://' if arg.startswith('http') else '://'
-                    self.redirects.append('{} redirected to {}'.format(arg,
-                        ''.join([scheme, resp.host, resp.url])))
+                resp = yield from aiohttp.request('HEAD', arg, allow_redirects=False)
+            if resp.status in (301, 302, 307):
+                redirects = 0
+                while redirects < 5:
+                    new_url = resp.headers.get('LOCATION') or resp.headers.get('URI')
+                    resp = yield from aiohttp.request('HEAD', new_url, allow_redirects=False)
+                    if resp.status == 200:
+                        if self.verb_ok:
+                            self.oks.append('{} redirected to {}'.format(arg, new_url))
+                        break
+                    else:
+                        redirects += 1
             elif resp.status == 200:
                 if self.verb_ok:
                     self.oks.append('{} {}'.format(arg, resp.status))
@@ -70,9 +70,6 @@ class CheckLinks(object):
         if self.oks:
             click.secho('The following links are OK:', fg='yellow')
             print('\n'.join(self.oks))
-        if self.redirects:
-            click.secho('\nThese links were redirected:', fg='yellow')
-            print('\n'.join(self.redirects))
         if self.probs:
             click.secho('\nThere were problems with these links:', fg='red')
             print('\n'.join(self.probs))
@@ -96,12 +93,16 @@ class GetUrls(object):
     def open_json(self, fname):
         with open(fname) as f:
             data = json.load(f)
-        self.parse_dict(data)
+        try:
+            self.parse_dict(data)
+        except Exception as e:
+            print(e, 'error while parsing json file. Parsing as text file.')
+            self.open_txt(fname)
 
     def parse_dict(self, data):
         if isinstance(data, dict):
             for key, val in data.items():
-                if isinstance(val, str) and val.startswith('http'):
+                if key.endswith('_url'):
                     self.urls.append(val)
                 else:
                     self.parse_dict(val)
@@ -121,20 +122,18 @@ class GetUrls(object):
 @click.argument('filename', nargs=-1)
 @click.option('--parse/--no-parse', '-p', default=False,
         help='Just parse the json / text files and then exit.')
-@click.option('--verbose', '-v', default=False, count=True,
-        help='v will check which links were redirected and vv will also print the links that are OK.')
+@click.option('--verbose', '-v', default=False,
+        help='Print out the links that are OK (including redirects).')
 def cli(filename, parse, verbose):
     """FILENAME is the file(s) which you want checked. It can be json or
     any other text format, and alinkcheck should be able to find the links in it.
     Then all the links will be checked and a report will be printed out to console."""
-    verb_redir = verbose > 0
-    verb_ok = verbose > 1
     for fname in filename:
         print('Parsing the file {}...'.format(fname))
         g = GetUrls(fname)
         if parse or not g.urls:
             print(g.urls)
             continue
-        cl = CheckLinks(fname, g.urls, verb_redir, verb_ok)
+        cl = CheckLinks(fname, g.urls, verbose)
         cl.run_check()
     click.secho('See you later.', fg='yellow')
