@@ -13,7 +13,7 @@ The links are checked asynchronously, which makes the whole process faster.
 Use
 ~~~
 
-alinkcheck [--help] [-vv] [-p] file
+alinkcheck [--help] [-vv] [-p] [-k keyname] file
 
 -  multiple files (json or text files) can be analyzed with one command
 
@@ -29,6 +29,14 @@ and adding the '-vv' option will also print out the links that are OK.
 
 The '-p' option will just parse the file(s), print out a list of the links
 and then exit.
+
+If you know the name of the key for each url, you can specify the key with the '-k' option.
+
+The following command will search the url_list.json file for every url linked to the "resource_url" key:
+
+::
+
+    alinkcheck -k resource_url url_list.json
 
 TODO
 ~~~~

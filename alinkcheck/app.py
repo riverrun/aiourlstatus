@@ -22,12 +22,14 @@ import click
 import aiohttp
 
 class CheckLinks(object):
-    def __init__(self, fname, urls, verb_ok):
+    def __init__(self, fname, urls, verb_redir, verb_ok):
         self.oks = []
+        self.redirects = []
         self.probs = []
         self.errors = []
         self.fname = fname
         self.urls = urls
+        self.verb_redir = verb_redir
         self.verb_ok = verb_ok
 
     def run_check(self):
@@ -53,8 +55,8 @@ class CheckLinks(object):
                     new_url = resp.headers.get('LOCATION') or resp.headers.get('URI')
                     resp = yield from aiohttp.request('HEAD', new_url, allow_redirects=False)
                     if resp.status == 200:
-                        if self.verb_ok:
-                            self.oks.append('{} redirected to {}'.format(arg, new_url))
+                        if self.verb_redir:
+                            self.redirects.append('{} redirected to {}'.format(arg, new_url))
                         break
                     else:
                         redirects += 1
@@ -70,6 +72,9 @@ class CheckLinks(object):
         if self.oks:
             click.secho('The following links are OK:', fg='yellow')
             print('\n'.join(self.oks))
+        if self.redirects:
+            click.secho('The following links have been redirected:', fg='yellow')
+            print('\n'.join(self.oks))
         if self.probs:
             click.secho('\nThere were problems with these links:', fg='red')
             print('\n'.join(self.probs))
@@ -80,9 +85,13 @@ class CheckLinks(object):
             len(self.urls), len(self.probs) + len(self.errors)), fg='yellow')
 
 class GetUrls(object):
-    def __init__(self, fname):
+    def __init__(self, fname, keyname):
         self.urls = []
-        self.get_ftype(fname)
+        if keyname:
+            self.keyname = keyname
+            self.get_ftype(fname)
+        else:
+            self.open_txt(fname)
 
     def get_ftype(self, fname):
         if fname.endswith('json'):
@@ -102,7 +111,7 @@ class GetUrls(object):
     def parse_dict(self, data):
         if isinstance(data, dict):
             for key, val in data.items():
-                if key.endswith('_url'):
+                if key == self.keyname:
                     self.urls.append(val)
                 else:
                     self.parse_dict(val)
@@ -120,20 +129,24 @@ class GetUrls(object):
 
 @click.command()
 @click.argument('filename', nargs=-1)
+@click.option('--keyname', '-k', default=None,
+        help='Name of the key for each url in the json file / dictionary.')
 @click.option('--parse/--no-parse', '-p', default=False,
         help='Just parse the json / text files and then exit.')
-@click.option('--verbose', '-v', default=False,
-        help='Print out the links that are OK (including redirects).')
-def cli(filename, parse, verbose):
+@click.option('--verbose', '-v', default=False, count=True,
+        help='v will show the redirected links and vv will also print out the links that are OK.')
+def cli(filename, keyname, parse, verbose):
     """FILENAME is the file(s) which you want checked. It can be json or
     any other text format, and alinkcheck should be able to find the links in it.
     Then all the links will be checked and a report will be printed out to console."""
+    verb_redir = True if verbose else False
+    verb_ok = True if verbose > 1 else False
     for fname in filename:
         print('Parsing the file {}...'.format(fname))
-        g = GetUrls(fname)
+        g = GetUrls(fname, keyname)
         if parse or not g.urls:
             print(g.urls)
             continue
-        cl = CheckLinks(fname, g.urls, verbose)
+        cl = CheckLinks(fname, g.urls, verb_redir, verb_ok)
         cl.run_check()
     click.secho('See you later.', fg='yellow')
