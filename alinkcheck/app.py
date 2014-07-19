@@ -92,6 +92,9 @@ class GetUrls(object):
             self.get_ftype(fname)
         else:
             self.open_txt(fname)
+        length = len(self.urls)
+        if length > 50:
+            self.sort_list(length)
 
     def get_ftype(self, fname):
         if fname.endswith('json'):
@@ -126,6 +129,14 @@ class GetUrls(object):
         with open(fname) as f:
             data = f.read()
         self.urls = re.findall('https?://[^\s<>\'"]+', data)
+
+    def sort_list(self, length):
+        urls = []
+        self.urls.sort()
+        space = length // 10
+        for i in range(space):
+            urls.extend(self.urls[i::space])
+        self.urls = urls
 
 @click.command()
 @click.argument('filename', nargs=-1)
