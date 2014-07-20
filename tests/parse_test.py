@@ -28,9 +28,15 @@ class TestJSON(unittest.TestCase):
                 'http://www.wikihow.com/Get-Rid-of-Anger', 'http://en.wikipedia.org/wiki/Anxiety', 'http://en.wikipedia.org/wiki/Fear']
         self.assertEqual(g.urls, url_list)
 
-    def test_keyword(self):
-        fname = 'keyword_test.json'
+    def test_keyname(self):
+        fname = 'keyname_test.json'
         g = GetUrls(fname, 'resource_url')
+        url_list = ['http://www.haskell.org/', 'http://www.python.org/', 'http://www.elixir-lang.org/']
+        self.assertEqual(g.urls, url_list)
+
+    def test_wrong_keyname(self):
+        fname = 'keyname_test.json'
+        g = GetUrls(fname, 'source_url')
         url_list = ['http://www.haskell.org/', 'http://www.python.org/', 'http://www.elixir-lang.org/']
         self.assertEqual(g.urls, url_list)
 

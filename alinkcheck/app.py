@@ -90,6 +90,9 @@ class GetUrls(object):
         if keyname:
             self.keyname = keyname
             self.get_ftype(fname)
+            if self.urls == []:
+                print('The keyname seems to be wrong. Parsing as text file.')
+                self.open_txt(fname)
         else:
             self.open_txt(fname)
         length = len(self.urls)
