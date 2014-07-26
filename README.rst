@@ -8,7 +8,10 @@ Features
 
 Alinkcheck parses json or text files, and then checks all the links it finds.
 
-The links are checked asynchronously, which makes the whole process faster.
+The links are checked asynchronously, so the program does not block while waiting for responses.
+However, the number of times each domain is checked is limited.
+This means that alinkcheck will run slower if the links you are checking are from
+a small number of domains.
 
 Use
 ~~~
@@ -41,8 +44,8 @@ The following command will search the url_list.json file for every url linked to
 TODO
 ~~~~
 
-- make sure that the parser works correctly.
 - support, and test, more filetypes.
+- take it easy for a while.
 
 Dependencies
 ~~~~~~~~~~~~
