@@ -22,21 +22,21 @@ import click
 import aiohttp
 
 class CheckLinks(object):
-    def __init__(self, fname, urls, verb_redir, verb_ok):
+    def __init__(self, fname, urls, len_urls, verb_redir, verb_ok):
         self.oks = []
         self.redirects = []
         self.probs = []
         self.errors = []
         self.fname = fname
         self.urls = urls
+        self.len_urls = len_urls
         self.verb_redir = verb_redir
         self.verb_ok = verb_ok
 
     def run_check(self):
-        print('Checking {} links...'.format(len(self.urls)))
+        print('Checking {} links...'.format(self.len_urls))
         loop = asyncio.get_event_loop()
-        self.sem = asyncio.Semaphore(20)
-        func = self.wait_prog([self.check_url(url) for url in self.urls])
+        func = self.wait_prog([self.check_urllist(urllist) for urllist in self.urls])
         loop.run_until_complete(func)
         self.report()
 
@@ -45,10 +45,16 @@ class CheckLinks(object):
             for f in prog:
                 yield from f
 
+    @asyncio.coroutine
+    def check_urllist(self, urllist):
+        sem = asyncio.Semaphore(5)
+        for url in urllist:
+            with (yield from sem):
+                yield from self.check_url(url)
+
     def check_url(self, arg):
         try:
-            with (yield from self.sem):
-                resp = yield from aiohttp.request('HEAD', arg, allow_redirects=False)
+            resp = yield from aiohttp.request('HEAD', arg, allow_redirects=False)
             if resp.status in (301, 302, 307):
                 redirects = 0
                 while redirects < 5:
@@ -82,7 +88,7 @@ class CheckLinks(object):
             click.secho('\nThere were errors with these links:', fg='red')
             print('\n'.join(self.errors))
         click.secho('{}: total {} links, could not connect to {} links.'.format(self.fname,
-            len(self.urls), len(self.probs) + len(self.errors)), fg='yellow')
+            self.len_urls, len(self.probs) + len(self.errors)), fg='yellow')
 
 class GetUrls(object):
     def __init__(self, fname, keyname):
@@ -96,8 +102,7 @@ class GetUrls(object):
         else:
             self.open_txt(fname)
         length = len(self.urls)
-        if length > 50:
-            self.sort_list(length)
+        self.sort_list(length)
 
     def get_ftype(self, fname):
         if fname.endswith('json'):
@@ -133,13 +138,28 @@ class GetUrls(object):
             data = f.read()
         self.urls = re.findall('https?://[^\s<>\'"]+', data)
 
+    def create_dict(self):
+        url_dict = {}
+        for url in self.urls:
+            try:
+                temp_key = url.split('/')[2]
+            except Exception:
+                temp_key = url
+            if temp_key.startswith('www.'):
+                key = temp_key.split('.', 1)[1]
+            else:
+                key = temp_key
+            if key in url_dict:
+                url_dict[key].append(url)
+            else:
+                url_dict[key] = [url]
+        return url_dict
+
     def sort_list(self, length):
-        urls = []
-        self.urls.sort()
-        space = length // 10
-        for i in range(space):
-            urls.extend(self.urls[i::space])
-        self.urls = urls
+        self.len_urls = length
+        url_dict = self.create_dict()
+        self.urls = list(url_dict.values())
+        self.urls.sort(key=lambda x: len(x), reverse=True)
 
 @click.command()
 @click.argument('filename', nargs=-1)
@@ -155,12 +175,13 @@ def cli(filename, keyname, parse, verbose):
     Then all the links will be checked and a report will be printed out to console."""
     verb_redir = True if verbose else False
     verb_ok = True if verbose > 1 else False
+    click.clear()
     for fname in filename:
         print('Parsing the file {}...'.format(fname))
         g = GetUrls(fname, keyname)
         if parse or not g.urls:
             print(g.urls)
             continue
-        cl = CheckLinks(fname, g.urls, verb_redir, verb_ok)
+        cl = CheckLinks(fname, g.urls, g.len_urls, verb_redir, verb_ok)
         cl.run_check()
     click.secho('See you later.', fg='yellow')
