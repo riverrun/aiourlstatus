@@ -1,12 +1,13 @@
 alinkcheck
 ==========
 
-A link checker that checks the links in json or text files - using Python 3.4 and asyncio
+A link checker that checks the urls in json or text files - using Python 3.4 and asyncio
 
 Features
 ~~~~~~~~
 
-Alinkcheck parses json or text files, and then checks all the links it finds.
+Alinkcheck parses json or text files, and then checks all the urls it finds.
+It can be used, for example, to check the links in files output by databases.
 
 The links are checked asynchronously, so the program does not block while waiting for responses.
 However, the number of times each domain is checked is limited.

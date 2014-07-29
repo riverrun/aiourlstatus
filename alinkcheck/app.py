@@ -76,16 +76,16 @@ class CheckLinks(object):
 
     def report(self):
         if self.oks:
-            click.secho('The following links are OK:', fg='yellow')
+            click.secho('The following links are OK:', fg='white', bg='blue')
             print('\n'.join(self.oks))
         if self.redirects:
-            click.secho('\nThe following links have been redirected:', fg='yellow')
+            click.secho('\nThe following links have been redirected:', fg='white', bg='blue')
             print('\n'.join(self.oks))
         if self.probs:
-            click.secho('\nThere were problems with these links:', fg='red')
+            click.secho('\nThere were problems with these links:', fg='white', bg='red')
             print('\n'.join(self.probs))
         if self.errors:
-            click.secho('\nThere were errors with these links:', fg='red')
+            click.secho('\nThere were errors with these links:', fg='white', bg='red')
             print('\n'.join(self.errors))
         click.secho('{}: total {} links, could not connect to {} links.'.format(self.fname,
             self.len_urls, len(self.probs) + len(self.errors)), fg='yellow')
