@@ -85,7 +85,7 @@ class CheckLinks(object):
             print('\n'.join(self.oks))
         if self.redirects:
             click.secho('\nThe following links have been redirected:', fg='yellow')
-            print('\n'.join(self.oks))
+            print('\n'.join(self.redirects))
         if self.probs:
             click.secho('\nThere were problems with these links:', fg='red')
             print('\n'.join(self.probs))
