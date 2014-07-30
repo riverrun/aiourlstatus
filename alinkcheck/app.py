@@ -22,6 +22,7 @@ import click
 import aiohttp
 
 class CheckLinks(object):
+    """Check the links found in the text file."""
     def __init__(self, fname, urls, len_urls, verb_redir, verb_ok):
         self.oks = []
         self.redirects = []
@@ -34,6 +35,7 @@ class CheckLinks(object):
         self.verb_ok = verb_ok
 
     def run_check(self):
+        """Set up loop and run async checks."""
         print('Checking {} links...'.format(self.len_urls))
         loop = asyncio.get_event_loop()
         func = self.wait_prog([self.check_urllist(urllist) for urllist in self.urls])
@@ -47,12 +49,14 @@ class CheckLinks(object):
 
     @asyncio.coroutine
     def check_urllist(self, urllist):
+        """A limit is placed on urls in each separate domain."""
         sem = asyncio.Semaphore(5)
         for url in urllist:
             with (yield from sem):
                 yield from self.check_url(url)
 
     def check_url(self, arg):
+        """Check url and add to ok, redirects, problems, or errors list."""
         try:
             resp = yield from aiohttp.request('HEAD', arg, allow_redirects=False)
             if resp.status in (301, 302, 307):
@@ -75,22 +79,27 @@ class CheckLinks(object):
             self.errors.append('{} {}'.format(arg, e))
 
     def report(self):
+        """Print out report."""
         if self.oks:
-            click.secho('The following links are OK:', fg='white', bg='blue')
+            click.secho('The following links are OK:', fg='yellow')
             print('\n'.join(self.oks))
         if self.redirects:
-            click.secho('\nThe following links have been redirected:', fg='white', bg='blue')
+            click.secho('\nThe following links have been redirected:', fg='yellow')
             print('\n'.join(self.oks))
         if self.probs:
-            click.secho('\nThere were problems with these links:', fg='white', bg='red')
+            click.secho('\nThere were problems with these links:', fg='red')
             print('\n'.join(self.probs))
         if self.errors:
-            click.secho('\nThere were errors with these links:', fg='white', bg='red')
+            click.secho('\nThere were errors with these links:', fg='red')
             print('\n'.join(self.errors))
         click.secho('{}: total {} links, could not connect to {} links.'.format(self.fname,
             self.len_urls, len(self.probs) + len(self.errors)), fg='yellow')
 
 class GetUrls(object):
+    """Get the urls from the text file. If it is a json file and a key is provided,
+    try to parse as a json file. If the key cannot be found, fallback
+    to parsing it as a text file. Text files are parsed using regular expressions.
+    """
     def __init__(self, fname, keyname):
         self.urls = []
         if keyname:
@@ -120,6 +129,7 @@ class GetUrls(object):
             self.open_txt(fname)
 
     def parse_dict(self, data):
+        """Parse the dictionary, or list, in the json file."""
         if isinstance(data, dict):
             for key, val in data.items():
                 if key == self.keyname:
@@ -139,6 +149,7 @@ class GetUrls(object):
         self.urls = re.findall('https?://[^\s<>\'"]+', data)
 
     def create_dict(self):
+        """Create a dictionary for each domain."""
         url_dict = {}
         for url in self.urls:
             try:
@@ -156,6 +167,9 @@ class GetUrls(object):
         return url_dict
 
     def sort_list(self, length):
+        """Sort the list of urls for each domain (most urls first).
+        This is so that we can limit the simultaneous requests to each domain.
+        """
         self.len_urls = length
         url_dict = self.create_dict()
         self.urls = list(url_dict.values())
