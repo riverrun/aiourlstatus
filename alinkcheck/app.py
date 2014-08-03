@@ -59,18 +59,18 @@ class CheckLinks(object):
         """Check url and add to ok, redirects, problems, or errors list."""
         try:
             resp = yield from aiohttp.request('HEAD', arg, allow_redirects=False)
-            if resp.status in (301, 302, 307):
+            if 301 <= resp.status <= 308:
                 redirects = 0
                 while redirects < 5:
                     new_url = resp.headers.get('LOCATION') or resp.headers.get('URI')
                     resp = yield from aiohttp.request('HEAD', new_url, allow_redirects=False)
-                    if resp.status == 200:
+                    if 200 <= resp.status <= 208:
                         if self.verb_redir:
                             self.redirects.append('{} redirected to {}'.format(arg, new_url))
                         break
                     else:
                         redirects += 1
-            elif resp.status == 200:
+            elif 200 <= resp.status <= 208:
                 if self.verb_ok:
                     self.oks.append('{} {}'.format(arg, resp.status))
             else:
