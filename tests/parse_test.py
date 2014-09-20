@@ -1,5 +1,5 @@
 import unittest
-from alinkcheck.app import GetUrls
+from alinkcheck.findurls import GetUrls
 
 class TestEmpty(unittest.TestCase):
     def test_no_urls(self):

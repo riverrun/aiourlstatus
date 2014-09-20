@@ -22,7 +22,7 @@ with open('README.rst') as f:
 
 setup(
     name='alinkcheck',
-    version='0.2.1',
+    version='0.3.0',
     author='David Whitlock',
     author_email='alovedalongthe@gmail.com',
     url='https://github.com/riverrun/alinkcheck',
@@ -35,7 +35,7 @@ setup(
     platforms='any',
     install_requires=['aiohttp', 'click'],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
