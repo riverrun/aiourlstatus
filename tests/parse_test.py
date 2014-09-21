@@ -1,5 +1,5 @@
 import unittest
-from alinkcheck import app
+from aiourlstatus import app
 
 class TestEmpty(unittest.TestCase):
     def test_no_urls(self):

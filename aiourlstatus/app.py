@@ -2,18 +2,18 @@
 # A simple text analysis tool
 # Copyright (C) 2014 David Whitlock
 #
-# Alinkcheck is free software: you can redistribute it and/or modify
+# Aiourlstatus is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Alinkcheck is distributed in the hope that it will be useful,
+# Aiourlstatus is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Alinkcheck.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+# along with Aiourlstatus.  If not, see <http://www.gnu.org/licenses/gpl.html>.
 
 import re
 import click
@@ -72,7 +72,7 @@ def stream_check(data, fname='text', parse=False, verb_redir=False, verb_ok=Fals
         help='v will show the redirected links and vv will also print out the links that are OK.')
 def cli(filename, parse, verbose):
     """FILENAME is the file(s) which you want checked. It can be json, xml or
-    any other text format, and alinkcheck will be able to find the links in it.
+    any other text format, and aiourlstatus will be able to find the links in it.
     Then all the links will be checked and a report will be printed out to console."""
     verb_redir = True if verbose else False
     verb_ok = True if verbose > 1 else False
