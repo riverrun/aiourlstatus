@@ -19,37 +19,50 @@ import re
 import click
 from .checkurls import CheckLinks
 
-class GetUrls(object):
-    """Find all the urls in the text and create a dictionary for each domain."""
-    def __init__(self, data):
-        self.sort_list(re.findall('https?://[^\s<>\'"]+', data))
+def create_dict(urls):
+    """Create a dictionary for each domain."""
+    url_dict = {}
+    for url in urls:
+        try:
+            temp_key = url.split('/')[2]
+        except Exception:
+            temp_key = url
+        if temp_key.startswith('www.'):
+            key = temp_key.split('.', 1)[1]
+        else:
+            key = temp_key
+        if key in url_dict:
+            url_dict[key].append(url)
+        else:
+            url_dict[key] = [url]
+    return url_dict
 
-    def create_dict(self, urls):
-        """Create a dictionary for each domain."""
-        url_dict = {}
-        for url in urls:
-            try:
-                temp_key = url.split('/')[2]
-            except Exception:
-                temp_key = url
-            if temp_key.startswith('www.'):
-                key = temp_key.split('.', 1)[1]
-            else:
-                key = temp_key
-            if key in url_dict:
-                url_dict[key].append(url)
-            else:
-                url_dict[key] = [url]
-        return url_dict
+def find_sort_urls(data):
+    """Sort the list of urls for each domain (most urls first).
+    This is so that we can limit the simultaneous requests to each domain.
+    """
+    urls = re.findall('https?://[^\s<>\'"]+', data)
+    len_urls = len(urls)
+    url_dict = create_dict(urls)
+    urls = list(url_dict.values())
+    urls.sort(key=lambda x: len(x), reverse=True)
+    return urls, len_urls
 
-    def sort_list(self, urls):
-        """Sort the list of urls for each domain (most urls first).
-        This is so that we can limit the simultaneous requests to each domain.
-        """
-        self.len_urls = len(urls)
-        url_dict = self.create_dict(urls)
-        self.urls = list(url_dict.values())
-        self.urls.sort(key=lambda x: len(x), reverse=True)
+def file_check(fname, parse=False, verb_redir=False, verb_ok=False):
+    """Open a file and then run the stream_check function."""
+    print('Parsing the file {}...'.format(fname))
+    with open(fname) as f:
+        data = f.read()
+    stream_check(data, fname, parse, verb_redir, verb_ok)
+
+def stream_check(data, fname='text', parse=False, verb_redir=False, verb_ok=False):
+    """Find the urls in a text stream and then check these urls."""
+    urls, len_urls = find_sort_urls(data)
+    if parse or not urls:
+        print(urls)
+        return
+    cl = CheckLinks(fname, urls, len_urls, verb_redir, verb_ok)
+    cl.run_check()
 
 @click.command()
 @click.argument('filename', nargs=-1)
@@ -58,19 +71,11 @@ class GetUrls(object):
 @click.option('--verbose', '-v', default=False, count=True,
         help='v will show the redirected links and vv will also print out the links that are OK.')
 def cli(filename, parse, verbose):
-    """FILENAME is the file(s) which you want checked. It can be json or
-    any other text format, and alinkcheck should be able to find the links in it.
+    """FILENAME is the file(s) which you want checked. It can be json, xml or
+    any other text format, and alinkcheck will be able to find the links in it.
     Then all the links will be checked and a report will be printed out to console."""
     verb_redir = True if verbose else False
     verb_ok = True if verbose > 1 else False
     for fname in filename:
-        print('Parsing the file {}...'.format(fname))
-        with open(fname) as f:
-            data = f.read()
-        g = GetUrls(data)
-        if parse or not g.urls:
-            print(g.urls)
-            continue
-        cl = CheckLinks(fname, g.urls, g.len_urls, verb_redir, verb_ok)
-        cl.run_check()
+        file_check(fname, parse, verb_redir, verb_ok)
     click.secho('See you later.', fg='yellow')
