@@ -22,7 +22,7 @@ with open('README.rst') as f:
 
 setup(
     name='aiourlstatus',
-    version='0.3.1',
+    version='0.3.2',
     author='David Whitlock',
     author_email='alovedalongthe@gmail.com',
     url='https://github.com/riverrun/aiourlstatus',

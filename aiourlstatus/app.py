@@ -64,7 +64,8 @@ def stream_check(data, fname='text', parse=False, verb_redir=False, verb_ok=Fals
     cl = CheckLinks(fname, urls, len_urls, verb_redir, verb_ok)
     cl.run_check()
 
-@click.command()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('filename', nargs=-1)
 @click.option('--parse/--no-parse', '-p', default=False,
         help='Just parse the json / text files and then exit.')
@@ -72,8 +73,12 @@ def stream_check(data, fname='text', parse=False, verb_redir=False, verb_ok=Fals
         help='v will show the redirected links and vv will also print out the links that are OK.')
 def cli(filename, parse, verbose):
     """FILENAME is the file(s) which you want checked. It can be json, xml or
-    any other text format, and aiourlstatus will be able to find the links in it.
-    Then all the links will be checked and a report will be printed out to console."""
+    any other text format, and aiourlstatus will be able to find the links in it.\n
+    Then all the links will be checked and a report will be printed out to console.\n
+    By default, the report will just list those urls with problems (client or server
+    errors) and urls with other errors. If you want the urls that were redirected
+    to be printed out, use the verbose option. If you also want the urls that were
+    OK to be printed out, use the double verbose (-vv) option."""
     verb_redir = True if verbose else False
     verb_ok = True if verbose > 1 else False
     for fname in filename:
