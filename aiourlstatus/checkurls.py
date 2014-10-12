@@ -31,6 +31,8 @@ class CheckLinks(object):
         self.len_urls = len_urls
         self.verb_redir = verb_redir
         self.verb_ok = verb_ok
+        self.headers = {'User-Agent':
+                'aiourlstatus/0.3.3 (https://github.com/riverrun/aiourlstatus/)'}
 
     def run_check(self):
         """Set up loop and run async checks."""
@@ -56,12 +58,14 @@ class CheckLinks(object):
     def check_url(self, arg):
         """Check url and add to ok, redirects, problems, or errors list."""
         try:
-            resp = yield from aiohttp.request('HEAD', arg, allow_redirects=False)
+            resp = yield from aiohttp.request('HEAD', arg,
+                    allow_redirects=False, headers=self.headers)
             if 301 <= resp.status <= 308:
                 redirects = 0
                 while redirects < 5:
                     new_url = resp.headers.get('LOCATION') or resp.headers.get('URI')
-                    resp = yield from aiohttp.request('HEAD', new_url, allow_redirects=False)
+                    resp = yield from aiohttp.request('HEAD', new_url,
+                            allow_redirects=False, headers=self.headers)
                     if 200 <= resp.status <= 208:
                         if self.verb_redir:
                             self.redirects.append('{} redirected to {}'.format(arg, new_url))
