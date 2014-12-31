@@ -1,6 +1,6 @@
 # Authors: David Whitlock <alovedalongthe@gmail.com>
 # A simple text analysis tool
-# Copyright (C) 2014 David Whitlock
+# Copyright (C) 2014-2015 David Whitlock
 #
 # Aiourlstatus is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

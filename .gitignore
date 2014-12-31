@@ -1,2 +1,2 @@
-dist/*
-aiourlstatus.egg-info/*
+dist/
+aiourlstatus.egg-info/
