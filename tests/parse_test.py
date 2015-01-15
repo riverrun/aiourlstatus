@@ -10,7 +10,7 @@ class TestEmpty(unittest.TestCase):
 
 class TestTXT(unittest.TestCase):
     def test_parse_text(self):
-        with open('retest.txt') as f:
+        with open('tests/retest.txt') as f:
             data = f.read()
         urls, len_urls = app.find_sort_urls(data)
         url_list = [['http://en.wikipedia.org/wiki/Body_image', 'http://en.wikipedia.org/wiki/Identity_formation',
