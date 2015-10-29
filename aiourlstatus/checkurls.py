@@ -22,17 +22,14 @@ import click
 class CheckLinks(object):
     """Check the links found in the text file."""
     def __init__(self, fname, urls, len_urls, verb_redir, verb_ok):
-        self.oks = []
-        self.redirects = []
-        self.probs = []
-        self.errors = []
+        self.oks, self.redirects, self.probs, self.errors = [], [], [], []
         self.fname = fname
         self.urls = urls
         self.len_urls = len_urls
         self.verb_redir = verb_redir
         self.verb_ok = verb_ok
         self.headers = {'User-Agent':
-                'aiourlstatus/0.3.3 (https://github.com/riverrun/aiourlstatus/)'}
+                'aiourlstatus/0.4.0 (https://github.com/riverrun/aiourlstatus/)'}
 
     def run_check(self):
         """Set up loop and run async checks."""
@@ -42,6 +39,7 @@ class CheckLinks(object):
         loop.run_until_complete(func)
         self.report()
 
+    @asyncio.coroutine
     def wait_prog(self, coros):
         with click.progressbar(asyncio.as_completed(coros), length=len(coros)) as prog:
             for f in prog:
@@ -49,12 +47,13 @@ class CheckLinks(object):
 
     @asyncio.coroutine
     def check_urllist(self, urllist):
-        """A limit is placed on urls in each separate domain."""
+        """A limit is placed on urls for each separate host."""
         sem = asyncio.Semaphore(5)
         for url in urllist:
             with (yield from sem):
                 yield from self.check_url(url)
 
+    @asyncio.coroutine
     def check_url(self, arg):
         """Check url and add to ok, redirects, problems, or errors list."""
         try:
@@ -64,6 +63,7 @@ class CheckLinks(object):
                 redirects = 0
                 while redirects < 5:
                     new_url = resp.headers.get('LOCATION') or resp.headers.get('URI')
+                    resp.close()
                     resp = yield from aiohttp.request('HEAD', new_url,
                             allow_redirects=False, headers=self.headers)
                     if 200 <= resp.status <= 208:
@@ -72,11 +72,13 @@ class CheckLinks(object):
                         break
                     else:
                         redirects += 1
+                resp.close()
             elif 200 <= resp.status <= 208:
                 if self.verb_ok:
                     self.oks.append('{} {}'.format(arg, resp.status))
             else:
                 self.probs.append('{} {}'.format(arg, resp.status))
+            resp.close()
         except Exception as e:
             self.errors.append('{} {}'.format(arg, e))
 
