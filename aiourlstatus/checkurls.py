@@ -1,6 +1,6 @@
 # Authors: David Whitlock <alovedalongthe@gmail.com>
 # A simple text analysis tool
-# Copyright (C) 2014-2015 David Whitlock
+# Copyright (C) 2014-2017 David Whitlock
 #
 # Aiourlstatus is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,84 +17,75 @@
 
 import asyncio
 import aiohttp
-import click
+import re
+from collections import namedtuple
+from itertools import groupby
+from urllib.parse import urlparse
 
-class CheckLinks(object):
-    """Check the links found in the text file."""
-    def __init__(self, fname, urls, len_urls, verb_redir, verb_ok):
-        self.oks, self.redirects, self.probs, self.errors = [], [], [], []
-        self.fname = fname
-        self.urls = urls
-        self.len_urls = len_urls
-        self.verb_redir = verb_redir
-        self.verb_ok = verb_ok
-        self.headers = {'User-Agent':
-                'aiourlstatus/0.4.0 (https://github.com/riverrun/aiourlstatus/)'}
+def find_urls(data):
+    """Extract urls from the data."""
+    urls = re.findall('https?://[^\s<>\'"]+', data)
+    data = [(urlparse(url).hostname, url) for url in urls]
+    data.sort(key=lambda x: x[0])
+    urllists = [[g[1] for g in group] for key, group in groupby(data, lambda x: x[0])]
+    len_urls = len(urls)
+    return urllists, len_urls
 
-    def run_check(self):
-        """Set up loop and run async checks."""
-        print('Checking {} links...'.format(self.len_urls))
-        loop = asyncio.get_event_loop()
-        func = self.wait_prog([self.check_urllist(urllist) for urllist in self.urls])
-        loop.run_until_complete(func)
-        self.report()
+def file_check(fname, parse=False):
+    """Find urls in a text file and then check those links."""
+    print('Parsing the file {}...'.format(fname))
+    with open(fname) as f:
+        data = f.read()
+    stream_check(data, fname, parse)
 
-    @asyncio.coroutine
-    def wait_prog(self, coros):
-        with click.progressbar(asyncio.as_completed(coros), length=len(coros)) as prog:
-            for f in prog:
-                yield from f
+def stream_check(data, fname='text', parse=False):
+    """Find the urls in a text stream and then check these urls."""
+    urls, len_urls = find_urls(data)
+    if parse or not urls:
+        print(urls)
+        return
+    run_check(fname, urls, len_urls)
 
-    @asyncio.coroutine
-    def check_urllist(self, urllist):
-        """A limit is placed on urls for each separate host."""
-        sem = asyncio.Semaphore(5)
-        for url in urllist:
-            with (yield from sem):
-                yield from self.check_url(url)
+async def fetch(session, urllist):
+    """Fetch url information for each url within a single domain."""
+    sem = asyncio.Semaphore(5)
+    for url in urllist:
+        with aiohttp.Timeout(30, loop=session.loop):
+            try:
+                async with sem, session.head(url, allow_redirects=True) as response:
+                    await response.release()
+            except Exception as e:
+                return Result(url, None, None, type(e).__name__)
+    return Result(url, response.status, response.history, None)
 
-    @asyncio.coroutine
-    def check_url(self, arg):
-        """Check url and add to ok, redirects, problems, or errors list."""
-        try:
-            resp = yield from aiohttp.request('HEAD', arg,
-                    allow_redirects=False, headers=self.headers)
-            if 301 <= resp.status <= 308:
-                redirects = 0
-                while redirects < 5:
-                    new_url = resp.headers.get('LOCATION') or resp.headers.get('URI')
-                    resp.close()
-                    resp = yield from aiohttp.request('HEAD', new_url,
-                            allow_redirects=False, headers=self.headers)
-                    if 200 <= resp.status <= 208:
-                        if self.verb_redir:
-                            self.redirects.append('{} redirected to {}'.format(arg, new_url))
-                        break
-                    else:
-                        redirects += 1
-                resp.close()
-            elif 200 <= resp.status <= 208:
-                if self.verb_ok:
-                    self.oks.append('{} {}'.format(arg, resp.status))
+async def fetch_all(loop, urls):
+    """Check all links."""
+    Result = namedtuple('Result', 'url status history error')
+    async with aiohttp.ClientSession(loop=loop) as session:
+        results = await asyncio.gather(
+            *[fetch(session, urllist, Result) for urllist in urls],
+            return_exceptions=True)
+        return results
+
+def run_check(fname, urls, len_urls):
+    """Run asyncio loop and then print out a report."""
+    print('Checking {} links...'.format(len_urls))
+    loop = asyncio.get_event_loop()
+    results = loop.run_until_complete(fetch_all(loop, urls))
+    report(results)
+
+def report(results):
+    """Print out report."""
+    res_dict = {'ok': [], 'redirect': [], 'problem': [], 'error': []}
+    for res in results:
+        if res.status:
+            if res.status < 300:
+                if res.history:
+                    res_dict['redirect'].append((res.url, res.status))
+                else:
+                    res_dict['ok'].append((res.url, res.status))
             else:
-                self.probs.append('{} {}'.format(arg, resp.status))
-            resp.close()
-        except Exception as e:
-            self.errors.append('{} {}'.format(arg, e))
-
-    def report(self):
-        """Print out report."""
-        if self.oks:
-            click.secho('The following links are OK:', fg='yellow')
-            print('\n'.join(self.oks))
-        if self.redirects:
-            click.secho('\nThe following links have been redirected:', fg='yellow')
-            print('\n'.join(self.redirects))
-        if self.probs:
-            click.secho('\nThere were problems with these links:', fg='red')
-            print('\n'.join(self.probs))
-        if self.errors:
-            click.secho('\nThere were errors with these links:', fg='red')
-            print('\n'.join(self.errors))
-        click.secho('{}: total {} links, could not connect to {} links.'.format(self.fname,
-            self.len_urls, len(self.probs) + len(self.errors)), fg='yellow')
+                res_dict['problem'].append((res.url, res.status))
+        else:
+            res_dict['error'].append((res.url, res.error))
+    print(res_dict)

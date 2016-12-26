@@ -1,6 +1,6 @@
 # Authors: David Whitlock <alovedalongthe@gmail.com>
 # A simple text analysis tool
-# Copyright (C) 2014-2015 David Whitlock
+# Copyright (C) 2014-2017 David Whitlock
 #
 # Aiourlstatus is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ with open('README.rst') as f:
 
 setup(
     name='aiourlstatus',
-    version='0.4.0',
+    version='0.5.0',
     author='David Whitlock',
     author_email='alovedalongthe@gmail.com',
     url='https://github.com/riverrun/aiourlstatus',
@@ -33,7 +33,7 @@ setup(
     include_package_data=False,
     zip_safe=False,
     platforms='any',
-    install_requires=['aiohttp', 'click'],
+    install_requires=['aiohttp'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -41,7 +41,7 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Internet :: WWW/HTTP :: Site Management :: Link Checking',
     ],
     entry_points={
