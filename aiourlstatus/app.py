@@ -30,10 +30,7 @@ usage = """filename is the file(s) which you want checked. It can be json, xml o
 def cli():
     parser = argparse.ArgumentParser(description='Asynchronous link checker', prog='aiourlstatus', epilog=usage)
     parser.add_argument('filename', nargs='+', help='the text file which contains the urls')
-    parser.add_argument('-p', '--parse', help='parse the text file and then exit without checking the links')
     parser.add_argument('-v', '--verbose', action='count', default=0, help='verbose')
     args = parser.parse_args()
-    #verb_redir = True if args.verbose else False
-    #verb_ok = True if args.verbose > 1 else False
     for fname in args.filename:
-        file_check(fname, args.parse)
+        file_check(fname, args.verbose)
