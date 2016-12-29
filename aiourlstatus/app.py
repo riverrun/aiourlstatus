@@ -1,5 +1,5 @@
 # Authors: David Whitlock <alovedalongthe@gmail.com>
-# A simple text analysis tool
+# A tool for testing url links
 # Copyright (C) 2014-2017 David Whitlock
 #
 # Aiourlstatus is free software: you can redistribute it and/or modify
