@@ -33,43 +33,43 @@ def find_urls(data):
     len_urls = len(urls)
     return urllists, len_urls
 
-def file_check(fname, verbose=0, raw=None):
+def file_check(fname, verbose=0, timeout=60, raw=None):
     """Find urls in a text file and then check those links."""
     print('Parsing the file {}...'.format(fname))
     with open(fname) as f:
         data = f.read()
-    return stream_check(data, fname, verbose, raw)
+    return stream_check(data, fname, verbose, timeout, raw)
 
-def stream_check(data, fname='text', verbose=0, raw=None):
+def stream_check(data, fname='text', verbose=0, timeout=60, raw=None):
     """Find the urls in a text stream and then check those urls."""
     urls, len_urls = find_urls(data)
     if not urls:
         return
     print('Checking {} links...'.format(len_urls))
     loop = asyncio.get_event_loop()
-    results = loop.run_until_complete(fetch_all(loop, urls))
+    results = loop.run_until_complete(fetch_all(loop, urls, timeout))
     return sort_results(results, verbose, raw)
 
-async def fetch(session, urllist, Result):
+async def fetch(session, urllist, Result, timeout):
     """Fetch url information for each url within a single domain."""
     sem = asyncio.Semaphore(5)
     for url in urllist:
-        with aiohttp.Timeout(60, loop=session.loop):
+        with aiohttp.Timeout(timeout, loop=session.loop):
             try:
                 async with sem, session.head(url,
-                        allow_redirects=True, header=headers) as response:
+                        allow_redirects=True, headers=headers) as response:
                     await response.release()
                     res = Result(url, response.status, response.history, None)
             except Exception as e:
                 res = Result(url, None, None, type(e).__name__)
     return res
 
-async def fetch_all(loop, urls):
+async def fetch_all(loop, urls, timeout):
     """Check all links."""
     Result = namedtuple('Result', 'url status history error')
     async with aiohttp.ClientSession(loop=loop) as session:
         results = await asyncio.gather(
-            *[fetch(session, urllist, Result) for urllist in urls],
+            *[fetch(session, urllist, Result, timeout) for urllist in urls],
             return_exceptions=True)
         return results
 
@@ -94,16 +94,14 @@ def sort_results(results, verbose, raw):
 def print_report(res_dict, verbose):
     """Print out report."""
     if verbose > 1:
-        print('These links are ok')
-        for url in res_dict['ok']:
-            print(url[0], url[1])
+        print_result(res_dict['ok'], '\nThese links are ok')
     if verbose:
-        print('These links were redirected, but are ok')
-        for url in res_dict['redirect']:
-            print(url[0], url[1])
-    print('There are problems with these links')
-    for url in res_dict['problem']:
-        print(url[0], url[1])
-    print('There were errors with these links')
-    for url in res_dict['error']:
-        print(url[0], url[1])
+        print_result(res_dict['redirect'], '\nThese links were redirected, but are ok')
+    print_result(res_dict['problem'], '\nThere are problems with these links')
+    print_result(res_dict['error'], '\nThere were errors with these links')
+
+def print_result(result_list, message):
+    if result_list:
+        print(message)
+        for url in result_list:
+            print('\t{} {}'.format(url[0], url[1]))
