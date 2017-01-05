@@ -22,6 +22,8 @@ from collections import namedtuple
 from itertools import groupby
 from urllib.parse import urlparse
 
+headers = {'User-Agent': 'aiourlstatus/0.5.0 (https://github.com/riverrun/aiourlstatus/)'}
+
 def find_urls(data):
     """Extract urls from the data."""
     urls = re.findall('https?://[^\s<>\'"]+', data)
@@ -54,7 +56,8 @@ async def fetch(session, urllist, Result):
     for url in urllist:
         with aiohttp.Timeout(60, loop=session.loop):
             try:
-                async with sem, session.head(url, allow_redirects=True) as response:
+                async with sem, session.head(url,
+                        allow_redirects=True, header=headers) as response:
                     await response.release()
                     res = Result(url, response.status, response.history, None)
             except Exception as e:

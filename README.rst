@@ -1,10 +1,7 @@
 Aiourlstatus
 ============
 
-A link checker that checks the urls in text files - using Python 3.4 and asyncio.
-
-This used to be called alinkcheck, but I changed the name to avoid confusion
-with another program.
+A link checker that checks the urls in text files - using Python 3.5 and asyncio.
 
 Features
 ~~~~~~~~
@@ -29,7 +26,7 @@ information about how to use aiourlstatus.
 Dependencies
 ~~~~~~~~~~~~
 
-Python 3.4, click and aiohttp.
+Python 3.5, click and aiohttp.
 
 Author
 ~~~~~~
